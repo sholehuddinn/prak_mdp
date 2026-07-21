@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-
+import 'transaction_form_page.dart';
+import 'transaction_list_page.dart';
 import '../models/transaction.dart';
 
 class HomePage extends StatefulWidget {
@@ -19,63 +20,26 @@ class _HomePageState extends State<HomePage> {
     'kelas': 'Praktikum Mobile Device Programming',
   };
 
-  void tampilkanDaftarTransaksi(List<Transaction> list) {
-    print('=============================================');
-    print('CETAK DATA TRANSAKSI KE CONSOLE');
-    print('=============================================');
-
-    for (int i = 0; i < list.length; i++) {
-      final String ket = list[i].keterangan ?? '';
-      final double nom = list[i].nominal;
-      final String jns = list[i].jenis;
-      final DateTime tgl = list[i].tanggal;
-
-      print('${i + 1}. [$jns] $ket: Rp $nom ($tgl)');
-    }
-
-    print('=============================================');
+  Future<void> tampilkanDaftarTransaksi() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const TransactionListPage()),
+    );
+    setState(() {});
   }
 
-  void tambahTransaksi(List<Transaction> list) {
-    final random = Random();
-
-    final listKeterangan = [
-      'Beli Kopi',
-      'Makan Siang',
-      'Uang Saku',
-      'Buku Catatan',
-      'Transportasi',
-      'Freelance',
-    ];
-
-    final listJenis = [
-      'Pemasukan',
-      'Pengeluaran',
-    ];
-
-    final randomKet = listKeterangan[random.nextInt(listKeterangan.length)];
-    final randomJns = listJenis[random.nextInt(listJenis.length)];
-    final randomNominal = (random.nextInt(15) + 1) * 10000.0;
-
-    final newTx = Transaction(
-      id: list.length + 1,
-      tanggal: DateTime.now(),
-      nominal: randomNominal,
-      keterangan: '$randomKet #${list.length + 1}',
-      jenis: randomJns,
+  Future<void> tambahTransaksi() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const TransactionFormPage()),
     );
-
-    setState(() {
-      list.add(newTx);
-    });
-
-    print('=============================================');
-    print('BERHASIL PUSH TRANSAKSI BARU KE ARRAY');
-    print('ID : ${newTx.id}');
-    print('Keterangan : ${newTx.keterangan}');
-    print('Nominal : Rp ${newTx.nominal}');
-    print('Jenis : ${newTx.jenis}');
-    print('=============================================');
+    // Navigasi ke halaman daftar transaksi
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const TransactionListPage()),
+      );
+    }
   }
 
   @override
@@ -104,7 +68,7 @@ class _HomePageState extends State<HomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          tambahTransaksi(daftarTransaksi);
+          tambahTransaksi();
         },
         backgroundColor: const Color(0xFF1565C0),
         child: const Icon(
@@ -208,7 +172,7 @@ class _HomePageState extends State<HomePage> {
             title: 'Lihat Transaksi',
             subtitle: 'History Transaksi',
             onTap: () {
-              tampilkanDaftarTransaksi(daftarTransaksi);
+              tampilkanDaftarTransaksi();
             },
           ),
           const SizedBox(height: 28),
