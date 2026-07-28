@@ -6,7 +6,9 @@ import '../models/transaction.dart';
 import '../database/database_helper.dart';
 
 class TransactionFormPage extends StatefulWidget {
-  const TransactionFormPage({super.key});
+  final Transaction? transaction;
+
+  const TransactionFormPage({super.key, this.transaction});
 
   @override
   State<TransactionFormPage> createState() => _TransactionFormPageState();
@@ -24,11 +26,19 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
   DateTime _selectedDate = DateTime.now();
   String _selectedJenis = 'pemasukan';
   bool _isSaving = false;
+  bool _isEditing = false;
 
   @override
-  void initState() {
-    super.initState();
-  }
+    void initState() {
+      super.initState();
+      if (widget.transaction != null) {
+        _isEditing = true;
+        _selectedDate = widget.transaction!.tanggal;
+        _nominalController.text = widget.transaction!.nominal.toStringAsFixed(0);
+        _keteranganController.text = widget.transaction!.keterangan ?? '';
+        _selectedJenis = widget.transaction!.jenis;
+      }
+    }
 
   @override
   void dispose() {
@@ -73,15 +83,20 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
     setState(() {
       _isSaving = true;
     });
-// map input form (id kosong karena di-generate oleh SQLite)
+// Membuat objek Transaction dari input form
     Transaction transaction = Transaction(
+      id: _isEditing ? widget.transaction!.id : null,
       tanggal: _selectedDate,
       nominal: double.parse(_nominalController.text),
       keterangan: _keteranganController.text.trim(),
       jenis: _selectedJenis,
     );
-// Simpan ke DB SQLite memanggil fungsi insertTransaction
-    await DatabaseHelper.instance.insertTransaction(transaction);
+// Simpan ke database SQLite memanggil fungsi insert atau update
+    if (_isEditing) {
+      await DatabaseHelper.instance.updateTransaction(transaction);
+    } else {
+      await DatabaseHelper.instance.insertTransaction(transaction);
+    }
 // Beri delay singkat agar animasi loading
     await Future.delayed(const Duration(milliseconds: 500));
     setState(() {
@@ -92,7 +107,9 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
 // Tampilkan pesan sukses
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Transaksi berhasil ditambahkan!'),
+        content: Text(_isEditing
+            ? 'Transaksi berhasil diperbarui!'
+            : 'Transaksi berhasil ditambahkan!'),
         backgroundColor: const Color(0xFF2E7D32),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -106,12 +123,9 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Form Transaksi',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+        title: Text(
+          _isEditing ? 'Edit Transaksi' : 'Tambah Transaksi',
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         centerTitle: true,
         backgroundColor: const Color(0xFF1565C0),

@@ -38,12 +38,67 @@ class _TransactionListPageState extends State<TransactionListPage> {
 
   /// Navigasi ke halaman Edit Transaksi.
   Future<void> handleEdit(Transaction transaction) async {
-    // Fitur modul selanjutnya
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TransactionFormPage(transaction: transaction),
+      ),
+    );
+    loadTransactions();
   }
-
   /// Menghapus transaksi dengan konfirmasi dialog.
   Future<void> handleDelete(Transaction transaction) async {
-    // Fitur modul selanjutnya
+    bool? confirmDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            SizedBox(width: 8),
+            Text('Konfirmasi Hapus'),
+          ],
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus transaksi "${transaction.keterangan}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmDelete == true) {
+      await DatabaseHelper.instance.deleteTransaction(transaction.id!);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Transaksi berhasil dihapus!'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+      loadTransactions();
+    }
   }
 
   /// Format angka menjadi format Rupiah.

@@ -78,4 +78,26 @@ class DatabaseHelper {
     // Mengubah hasil Map dari SQLite menjadi List<Transaction>
     return maps.map((map) => Transaction.fromMap(map)).toList();
   }
+
+  /// Mengupdate data transaksi yang sudah ada di database.
+  Future<int> updateTransaction(Transaction transaction) async {
+    Database db = await database;
+    return await db.update(
+      tableTransactions,
+      transaction.toMap(),
+      where: 'id = ?',
+      whereArgs: [transaction.id],
+    );
+  }
+
+  // --- DELETE ---
+  /// Menghapus transaksi dari database berdasarkan id.
+  Future<int> deleteTransaction(int id) async {
+    Database db = await database;
+    return await db.delete(
+      tableTransactions,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
 }
