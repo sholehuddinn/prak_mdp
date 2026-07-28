@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'pages/home_page.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'pages/home_page.dart';
-
-void main() async {
-WidgetsFlutterBinding.ensureInitialized();
-await initializeDateFormatting('id_ID', null);
-runApp(const MyApp());
+import 'pages/splash_page.dart';
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+// Memuat file konfigurasi environment (.env)
+  await dotenv.load(fileName: ".env");
+  await initializeDateFormatting('id_ID', null);
+  runApp(const MyApp());
 }
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
@@ -20,11 +19,11 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6366F1),
-          primary: const Color(0xFF6366F1),
+          seedColor: const Color(0xFF1565C0),
+          primary: const Color(0xFF1565C0),
         ),
       ),
-      home: const HomePage(),
+      home: const SplashPage(),
     );
   }
 }

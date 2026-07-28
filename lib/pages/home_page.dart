@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'transaction_form_page.dart';
 import 'transaction_list_page.dart';
 import '../models/transaction.dart';
+import 'login_page.dart';
+import '../services/auth_service.dart';
+import '../models/user_model.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -14,11 +17,30 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final String title = 'Money Notes';
 
-  final Map<String, String> profileMhs = const {
+  Map<String, String> profileMhs = const {
     'nama': 'M. Fajar Sholehuddin Maulana Putra',
     'nim': '202311420008',
     'kelas': 'Praktikum Mobile Device Programming',
   };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+  Future<void> _loadUserProfile() async {
+    final UserModel? user = await AuthService().getUser();
+    if (user != null) {
+      setState(() {
+        profileMhs = {
+          'nama': user.name,
+          'nim': user.username,
+          'email': user.email,
+          'kelas': 'Praktikum Mobile Device Programming',
+        };
+      });
+    }
+  }
 
   Future<void> tampilkanDaftarTransaksi() async {
     await Navigator.push(
@@ -49,13 +71,60 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF1565C0),
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_rounded),
+            tooltip: 'Keluar',
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Keluar'),
+                  content: const Text(
+
+                    'Apakah Anda yakin ingin keluar dari aplikasi?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+
+                      child: const Text('Batal'),
+
+                    ),
+
+                    TextButton(
+
+                      onPressed: () => Navigator.pop(context, true),
+
+                      child: const Text(
+                        'Keluar',
+
+                        style: TextStyle(color: Colors.red),
+
+                      ),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                await AuthService().logout();
+                if (context.mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+
+                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                        (route) => false,
+
+                  );
+                }
+              }
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
