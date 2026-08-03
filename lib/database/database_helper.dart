@@ -66,16 +66,58 @@ class DatabaseHelper {
   // --- READ (Query All) ---
 
   /// Mengambil semua data transaksi dari database.
-  Future<List<Transaction>> getAllTransactions() async {
+  Future<List<Transaction>> getAllTransactions({
+    DateTime? startDate,
+    DateTime? endDate,
+    String? jenis,
+  }) async {
     Database db = await database;
 
-    // Mengambil data dan mengurutkannya dari yang terbaru
+    List<String> whereClauses = [];
+    List<dynamic> whereArgs = [];
+
+    if (startDate != null) {
+      whereClauses.add('tanggal >= ?');
+      whereArgs.add(startDate.toIso8601String());
+    }
+
+    if (endDate != null) {
+      whereClauses.add('tanggal <= ?');
+      whereArgs.add(endDate.toIso8601String());
+    }
+
+    if (jenis != null && jenis.toLowerCase() != 'semua') {
+      final normalizedJenis = jenis.toLowerCase();
+      final dbJenis = normalizedJenis == 'pemasukan'
+          ? 'pemasukan'
+          : normalizedJenis == 'pengeluaran'
+              ? 'pengeluaran'
+              : normalizedJenis;
+
+      whereClauses.add('jenis = ?');
+      whereArgs.add(dbJenis);
+    }
+
     List<Map<String, dynamic>> maps = await db.query(
       tableTransactions,
+      where: whereClauses.isEmpty ? null : whereClauses.join(' AND '),
+      whereArgs: whereArgs.isEmpty ? null : whereArgs,
       orderBy: 'tanggal DESC',
     );
 
-    // Mengubah hasil Map dari SQLite menjadi List<Transaction>
+    return maps.map((map) => Transaction.fromMap(map)).toList();
+  }
+
+  /// Mengambil 5 transaksi terbaru dari database.
+  Future<List<Transaction>> getRecentTransactions() async {
+    Database db = await database;
+
+    List<Map<String, dynamic>> maps = await db.query(
+      tableTransactions,
+      orderBy: 'tanggal DESC',
+      limit: 5,
+    );
+
     return maps.map((map) => Transaction.fromMap(map)).toList();
   }
 

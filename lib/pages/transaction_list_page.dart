@@ -14,6 +14,9 @@ class TransactionListPage extends StatefulWidget {
 class _TransactionListPageState extends State<TransactionListPage> {
   List<Transaction> _transactions = [];
   bool _isLoading = true;
+  DateTime? _startDate;
+  DateTime? _endDate;
+  String _selectedJenis = 'Semua';
 
   @override
   void initState() {
@@ -21,19 +24,167 @@ class _TransactionListPageState extends State<TransactionListPage> {
     loadTransactions();
   }
 
-  /// Memuat semua data transaksi dari local DummyData list.
-  /// Memuat semua data transaksi dari database SQLite.
+  /// Memuat semua data transaksi dari database SQLite dengan filter.
   Future<void> loadTransactions() async {
     setState(() {
       _isLoading = true;
     });
-// Ambil data dari SQLite
-    List<Transaction> transactions = await DatabaseHelper.instance
-        .getAllTransactions();
+
+    final filterJenis = _selectedJenis == 'Semua'
+        ? 'Semua'
+        : _selectedJenis.toLowerCase();
+
+    List<Transaction> transactions = await DatabaseHelper.instance.getAllTransactions(
+      startDate: _startDate,
+      endDate: _endDate,
+      jenis: filterJenis,
+    );
+
     setState(() {
       _transactions = transactions;
       _isLoading = false;
     });
+  }
+
+  Future<void> _showFilterDialog() async {
+    DateTime? startDate = _startDate;
+    DateTime? endDate = _endDate;
+    String selectedJenis = _selectedJenis;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Filter Transaksi',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: startDate ?? DateTime.now(),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null) {
+                              setModalState(() {
+                                startDate = picked;
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.calendar_today_outlined),
+                          label: Text(
+                            startDate == null
+                                ? 'Tanggal Awal'
+                                : DateFormat('dd/MM/yyyy').format(startDate!),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: endDate ?? DateTime.now(),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null) {
+                              setModalState(() {
+                                endDate = picked;
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.event),
+                          label: Text(
+                            endDate == null
+                                ? 'Tanggal Akhir'
+                                : DateFormat('dd/MM/yyyy').format(endDate!),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Kategori'),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: ['Semua', 'Pemasukan', 'Pengeluaran'].map((jenis) {
+                      return ChoiceChip(
+                        label: Text(jenis),
+                        selected: selectedJenis == jenis,
+                        onSelected: (_) {
+                          setModalState(() {
+                            selectedJenis = jenis;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setState(() {
+                              _startDate = null;
+                              _endDate = null;
+                              _selectedJenis = 'Semua';
+                            });
+                            Navigator.pop(context);
+                            loadTransactions();
+                          },
+                          child: const Text('Reset'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              _startDate = startDate;
+                              _endDate = endDate;
+                              _selectedJenis = selectedJenis;
+                            });
+                            Navigator.pop(context);
+                            loadTransactions();
+                          },
+                          child: const Text('Terapkan'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   /// Navigasi ke halaman Edit Transaksi.
@@ -134,6 +285,13 @@ class _TransactionListPageState extends State<TransactionListPage> {
         backgroundColor: const Color(0xFF1565C0),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            onPressed: _showFilterDialog,
+            icon: const Icon(Icons.filter_list),
+            tooltip: 'Filter transaksi',
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

@@ -48,6 +48,34 @@ class AuthService {
     }
   }
 
+  /// Melakukan proses pendaftaran akun.
+  Future<LoginResponse> register({
+    required String name,
+    required String username,
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final response = await ApiService.post(
+        '/register',
+        {
+          'name': name,
+          'username': username,
+          'email': email,
+          'password': password,
+        },
+      );
+
+      final json = jsonDecode(response.body);
+      return LoginResponse.fromJson(json);
+    } catch (e) {
+      return LoginResponse(
+        status: 'error',
+        message: 'Gagal menghubungkan ke server: $e',
+      );
+    }
+  }
+
   /// Menyimpan token dan data pengguna ke SharedPreferences.
   Future<void> saveSession(
       String token,

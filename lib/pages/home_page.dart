@@ -1,7 +1,7 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'transaction_form_page.dart';
 import 'transaction_list_page.dart';
+import '../database/database_helper.dart';
 import '../models/transaction.dart';
 import 'login_page.dart';
 import '../services/auth_service.dart';
@@ -16,6 +16,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final String title = 'Money Notes';
+  List<Transaction> _recentTransactions = [];
+  bool _isLoadingTransactions = true;
 
   Map<String, String> profileMhs = const {
     'nama': 'M. Fajar Sholehuddin Maulana Putra',
@@ -27,7 +29,9 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadUserProfile();
+    _loadRecentTransactions();
   }
+
   Future<void> _loadUserProfile() async {
     final UserModel? user = await AuthService().getUser();
     if (user != null) {
@@ -42,12 +46,24 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _loadRecentTransactions() async {
+    final transactions = await DatabaseHelper.instance.getRecentTransactions();
+    if (!mounted) return;
+
+    setState(() {
+      _recentTransactions = transactions;
+      _isLoadingTransactions = false;
+    });
+  }
+
   Future<void> tampilkanDaftarTransaksi() async {
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const TransactionListPage()),
     );
-    setState(() {});
+    if (mounted) {
+      await _loadRecentTransactions();
+    }
   }
 
   Future<void> tambahTransaksi() async {
@@ -55,19 +71,13 @@ class _HomePageState extends State<HomePage> {
       context,
       MaterialPageRoute(builder: (context) => const TransactionFormPage()),
     );
-    // Navigasi ke halaman daftar transaksi
     if (mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const TransactionListPage()),
-      );
+      await _loadRecentTransactions();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final List<Transaction> daftarTransaksi = DummyData.list;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
@@ -126,13 +136,17 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildHeaderProfile(),
-            _buildMainContent(daftarTransaksi),
-          ],
+      body: RefreshIndicator(
+        onRefresh: _loadRecentTransactions,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildHeaderProfile(),
+              _buildMainContent(),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -218,7 +232,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildMainContent(List<Transaction> daftarTransaksi) {
+  Widget _buildMainContent() {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: 20,
@@ -244,6 +258,102 @@ class _HomePageState extends State<HomePage> {
               tampilkanDaftarTransaksi();
             },
           ),
+          const SizedBox(height: 16),
+          const Text(
+            '5 Transaksi Terakhir',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A237E),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (_isLoadingTransactions)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_recentTransactions.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Text(
+                'Belum ada transaksi yang tersimpan.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _recentTransactions.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final transaction = _recentTransactions[index];
+                final isPemasukan = transaction.jenis.toLowerCase() == 'pemasukan';
+                return Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: isPemasukan
+                            ? const Color(0xFF2E7D32).withValues(alpha: 0.15)
+                            : const Color(0xFFC62828).withValues(alpha: 0.15),
+                        child: Icon(
+                          isPemasukan ? Icons.arrow_downward : Icons.arrow_upward,
+                          color: isPemasukan ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              transaction.keterangan ?? 'Tanpa keterangan',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF263238),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${transaction.tanggal.day}/${transaction.tanggal.month}/${transaction.tanggal.year}',
+                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '${isPemasukan ? '+' : '-'}Rp ${transaction.nominal.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isPemasukan ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           const SizedBox(height: 28),
         ],
       ),

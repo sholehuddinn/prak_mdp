@@ -4,6 +4,7 @@ import '../models/login_response.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import 'home_page.dart';
+import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -344,7 +345,12 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     GestureDetector(
                       onTap: () {
-                        // TODO: Halaman Register
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const RegisterPage(),
+                          ),
+                        );
                       },
                       child: const Text(
                         'Daftar Sekarang',
